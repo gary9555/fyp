@@ -151,10 +151,10 @@ for i = 1:nts,
         RAEE = RAEE + sqrt(tmp)/20;
 
     elseif data_name == rotBar
-        gtx = vxGT(yi-1,xi-1);
-        gty = vyGT(yi-1,xi-1);
+        gtx = abs(vxGT(yi,xi));
+        gty = abs(vyGT(yi,xi));
         if abs(gtx)> speed_thres || abs(gty)> speed_thres
-            RAEE = RAEE + sqrt((u-gtx)^2+(v-gty)^2)/sqrt(gtx^2+gty^2);
+            RAEE = RAEE + sqrt((abs(u)-gtx)^2+(abs(v)-gty)^2)/sqrt(gtx^2+gty^2);
         end
 
     elseif data_name == translSin
