@@ -29,7 +29,7 @@ if nargin==0,
 end
 if nargin==1,
      maxevents=defaultmaxevents;
-        path='';
+        path='./aedat/';
     filename=file;
 end
 if nargin==2,

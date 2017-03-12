@@ -19,19 +19,31 @@ addpath('./aedat/')
 % ts = ts_selected_(15000:end);
 % pol = pol_selected_(15000:end);
 
-% 3) Load data from the 
-[x,y,pol,ts] = getDVSeventsDavis('RotatingBar.aedat');
-%[t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis;%('IMU_rotBars.aedat',10000);  
-%ts = ts/30;
-
 % Define specific operations for different datasets
 translSquare = 1; % syn sample
 rotBar = 2; % syn sample
 translSin = 3; % real sample
 rotDisk = 4;  % real sample
 translBoxes = 5; % real sample
+
 % here we assign the data set we are using 
 data_name = rotBar;
+show_flow_flag = false;
+%organize data in chunks
+group_time = true;%true;
+ms_per_frame = 5; %5 %ms
+id_tsb = 1; % previous group of spike index
+spikes_per_frame = 400;%5000; % visualize the flow every spikes_per_frame spikes
+
+
+% 3) Load data from the
+if data_name == translSquare
+    [x,y,pol,ts] = getDVSeventsDavis('TranslatingSquare.aedat');
+elseif data_name == rotBar
+    [x,y,pol,ts] = getDVSeventsDavis('RotatingBar.aedat');
+end
+%[t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis;%('IMU_rotBars.aedat',10000);  
+%ts = ts/30;
 
 %%%%%
 % load 'selectedData.mat'
@@ -74,12 +86,6 @@ pol =double(pol);
 %num spikes
 nts = length(ts);
 
-%organize data in chunks
-group_time = true;%true;
-ms_per_frame = 5; %5 %ms
-id_tsb = 1; % previous group of spike index
-spikes_per_frame = 400;%5000; % visualize the flow every spikes_per_frame spikes
-
 % size image
 %xmax = 240;%max(xs);
 %ymax = 180;%max(ys);
@@ -100,9 +106,13 @@ T = zeros(ymax,xmax);
 % average end point error
 RAEE = 0;
 
-if data_name ==rotBar
+if data_name == rotBar
    load('gtRotatingBar.mat','vxGT','vyGT');
+   nts = 15000;
 end
+
+vxE = zeros(180,240);
+vyE = zeros(180,240);
 
 tic
 for i = 1:nts,
@@ -113,98 +123,98 @@ for i = 1:nts,
     poli =  sign(pol(i) - .5); % +1/-1
     
     % update the belief every spike
-    if  (group_time && (tsi-ts(id_tsb) >= ms_per_frame*1E3))
-        [u,v] = of.updateFlow(xi,yi,tsi,poli,true);
-    else
-        [u,v] = of.updateFlow(xi,yi,tsi,poli,false);
-    end
- 
-%%%%%%%%%%%%%%%%%%% translating square %%%%%%%%%%%%%%%%%%    
+    [u,v] = of.updateFlow(xi,yi,tsi,poli);
+    
+    vxE(yi,xi) = u;
+    vyE(yi,xi) = v;
+    %%%%%%%%%%%%%%%%%%% translating square %%%%%%%%%%%%%%%%%%    
     % only reasonable speed is considered
-if data_name == translSquare
-    if u < speed_thres
-        u=0;
-    end
-    if v < speed_thres
-        v=0;
-    end
-    
-    tmp = 0;
-    if u<10 
-        tmp = u^2;
-    else
-        tmp = (20-u)^2;
-    end
-    if v<10
-        tmp = tmp+v^2;
-    else
-        tmp = tmp+ (20-v)^2; 
-    end
-    RAEE = RAEE + sqrt(tmp)/20;
-
-elseif data_name == rotBar
-    gtx = vxGT(yi,xi);
-    gty = vyGT(yi,xi);
-    if abs(gtx)>0 && abs(gty)>0
-        RAEE = RAEE + sqrt((u-gtx)^2+(v-gty)^2)/sqrt(gtx^2+gty^2);
-    end
-    
-elseif data_name == translSin
-    
-
-elseif data_name == rotDisk
-    
-
-elseif data_name == translBoxes
-    
-end
-%%%%%%%%%%%%%%%%%%% /translating square %%%%%%%%%%%%%%%%%%    
-        
-%% show flow
- 
-    U(yi,xi)= u;    
-    V(yi,xi)= v;
-    T(yi,xi)= tsi;
-    
-    % but only update the plot every group of spike
-    if  (group_time && (tsi-ts(id_tsb) >= ms_per_frame*1E3)) || ...  % group spikes in terms of time
-        (~group_time && mod(i,spikes_per_frame)==0) || (i==nts)      % group spikes in terms of number of spikes
-         duration = (tsi-ts(id_tsb))/1E6; % in seconds
-        
-        %%%%%% Current normal flow vector chart %%%%%%%%
-        figure(1); hold off;
-        Ut = U.*(abs(U)<5000); % max THR pixel/sec
-        Vt = V.*(abs(V)<5000); % max THR pixel/sec
-        
-        plot_flowc(X,Y,Ut,Vt,1/duration,2);
-        %plot_flowc(X,Y,medfilt2(Ut),medfilt2(Vt),1/duration,2);% scale(2), sparsity
-        %plot_flowc(X,Y,(Ut),-(Vt),1/duration,2);% scale, sparsity
-        title (['Flow at spike ' num2str(i)]);
-        
-        %%%%% Current spike image in gray scale %%%%%%%%
-        figure(2); hold off;
-        %Img(sub2ind([ymax,xmax],y(i-spikes_per_frame+1:i)+1,x(i-spikes_per_frame+1:i)+1))=double(2*pol(i-spikes_per_frame+1:i))-1;
-        Img(sub2ind([ymax,xmax],ymax+1-(y(id_tsb:i)+1),x(id_tsb:i)+1))=double(2*pol(id_tsb:i))-1;
-        imagesc(Img); colormap gray;
-        title('Input spikes')
-        
-        % load francisco datatas
-%         if (~group_time && spikes_per_frame==5000)
-%             load(['ball_francisco/frame_'  num2str(floor(i/spikes_per_frame),'%05d') '.mat']);
-%             figure(3); hold off;
-%             plot_flowc(X,Y,vx,-vy,.1,2);% scale, sparsity
-%             title (['Plane fitting at spike ' num2str(i)]);          
-%         end
-        pause();
-        
-        id_tsb = i; % index of the end of the last group of spikes
-        if i~= nts
-            % clear the map every manipulation
-            U = zeros(ymax,xmax); V = zeros(ymax,xmax); Img= zeros(ymax,xmax);
+    if data_name == translSquare
+        if u < speed_thres
+            u=0;
         end
+        if v < speed_thres
+            v=0;
+        end
+
+        tmp = 0;
+        if u<10 
+            %tmp = u^2;
+        else
+            tmp = (20-u)^2;
+        end
+        if v<10
+            %tmp = tmp+v^2;
+        else
+            tmp = tmp+ (20-v)^2; 
+        end
+        RAEE = RAEE + sqrt(tmp)/20;
+
+    elseif data_name == rotBar
+        gtx = vxGT(yi-1,xi-1);
+        gty = vyGT(yi-1,xi-1);
+        if abs(gtx)> speed_thres || abs(gty)> speed_thres
+            RAEE = RAEE + sqrt((u-gtx)^2+(v-gty)^2)/sqrt(gtx^2+gty^2);
+        end
+
+    elseif data_name == translSin
+
+
+    elseif data_name == rotDisk
+
+
+    elseif data_name == translBoxes
+
     end
-end
+    %%%%%%%%%%%%%%%%%%% /translating square %%%%%%%%%%%%%%%%%%    
+        
+    %% show flow
+    if show_flow_flag == true
+        U(yi,xi)= u;    
+        V(yi,xi)= v;
+        T(yi,xi)= tsi;
+
+        % but only update the plot every group of spike
+        if  (group_time && (tsi-ts(id_tsb) >= ms_per_frame*1E3)) || ...  % group spikes in terms of time
+            (~group_time && mod(i,spikes_per_frame)==0) || (i==nts)      % group spikes in terms of number of spikes
+             duration = (tsi-ts(id_tsb))/1E6; % in seconds
+
+            %%%%%% Current normal flow vector chart %%%%%%%%
+            figure(1); hold off;
+            Ut = U.*(abs(U)<5000); % max THR pixel/sec
+            Vt = V.*(abs(V)<5000); % max THR pixel/sec
+
+            plot_flowc(X,Y,Ut,Vt,1/duration,2);
+            %plot_flowc(X,Y,medfilt2(Ut),medfilt2(Vt),1/duration,2);% scale(2), sparsity
+            %plot_flowc(X,Y,(Ut),-(Vt),1/duration,2);% scale, sparsity
+            title (['Flow at spike ' num2str(i)]);
+
+            %%%%% Current spike image in gray scale %%%%%%%%
+            figure(2); hold off;
+            %Img(sub2ind([ymax,xmax],y(i-spikes_per_frame+1:i)+1,x(i-spikes_per_frame+1:i)+1))=double(2*pol(i-spikes_per_frame+1:i))-1;
+            Img(sub2ind([ymax,xmax],ymax+1-(y(id_tsb:i)+1),x(id_tsb:i)+1))=double(2*pol(id_tsb:i))-1;
+            imagesc(Img); colormap gray;
+            title('Input spikes')
+
+            % load francisco datatas
+    %         if (~group_time && spikes_per_frame==5000)
+    %             load(['ball_francisco/frame_'  num2str(floor(i/spikes_per_frame),'%05d') '.mat']);
+    %             figure(3); hold off;
+    %             plot_flowc(X,Y,vx,-vy,.1,2);% scale, sparsity
+    %             title (['Plane fitting at spike ' num2str(i)]);          
+    %         end
+            pause();
+
+            id_tsb = i; % index of the end of the last group of spikes
+            if i~= nts
+                % clear the map after rendering the plot of every group of spikes
+                U = zeros(ymax,xmax); V = zeros(ymax,xmax); Img= zeros(ymax,xmax);
+            end
+        end % update every group of spikes
+    end % show_flow_flag
+end % outmost loop
 RAEE = RAEE/nts;
+disp(['RAEE = ' num2str(RAEE)]);
 
 %avMsXSpike = toc/i*1000;
 %disp(avMsXSpike);

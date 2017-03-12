@@ -46,7 +46,7 @@ classdef SpikeNormalFlow<handle
             end
         end
         
-        function [vx,vy]=updateFlow(obj,x,y,ts,pol,stp)
+        function [vx,vy]=updateFlow(obj,x,y,ts,pol)
             ts  = double(ts);
             tsp = ts*pol; % Polarity encoded as positive/negative times
 
@@ -72,10 +72,7 @@ classdef SpikeNormalFlow<handle
             end
             % update the beliefs
             obj.belief{x,y} = obj.updateBelief(obj.belief, dt_spike,x,y,tsp,pol);
-            if stp==true
-                %disp(obj.belief{x-1,y});
-                %pause();
-            end
+            
             %  MAP estimate
             %[tx,ty] = obj.lse(x,y);
             [tx,ty] = obj.wlseBelief(x,y);
