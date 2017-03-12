@@ -109,10 +109,14 @@ RAEE = 0;
 if data_name == rotBar
    load('gtRotatingBar.mat','vxGT','vyGT');
    nts = 15000;
+   vxE = zeros(180,240);
+   vyE = zeros(180,240);
+   update_mat = zeros(180,240);
 end
 
 vxE = zeros(180,240);
 vyE = zeros(180,240);
+update_mat = zeros(180,240);
 
 tic
 for i = 1:nts,
@@ -125,8 +129,6 @@ for i = 1:nts,
     % update the belief every spike
     [u,v] = of.updateFlow(xi,yi,tsi,poli);
     
-    vxE(yi,xi) = u;
-    vyE(yi,xi) = v;
     %%%%%%%%%%%%%%%%%%% translating square %%%%%%%%%%%%%%%%%%    
     % only reasonable speed is considered
     if data_name == translSquare
@@ -151,10 +153,15 @@ for i = 1:nts,
         RAEE = RAEE + sqrt(tmp)/20;
 
     elseif data_name == rotBar
-        gtx = abs(vxGT(yi,xi));
-        gty = abs(vyGT(yi,xi));
-        if abs(gtx)> speed_thres || abs(gty)> speed_thres
-            RAEE = RAEE + sqrt((abs(u)-gtx)^2+(abs(v)-gty)^2)/sqrt(gtx^2+gty^2);
+        if update_mat(yi,xi) == 0
+            gtx = abs(vxGT(yi,xi));
+            gty = abs(vyGT(yi,xi));
+            if abs(gtx)> speed_thres || abs(gty)> speed_thres
+                RAEE = RAEE + sqrt((abs(u)-gtx)^2+(abs(v)-gty)^2)/sqrt(gtx^2+gty^2);
+            end
+            update_mat(yi,xi) = 1;
+            vxE(yi,xi) = u;
+            vyE(yi,xi) = v;
         end
 
     elseif data_name == translSin
