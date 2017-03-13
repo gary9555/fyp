@@ -27,11 +27,11 @@ rotDisk = 4;  % real sample
 translBoxes = 5; % real sample
 
 % here we assign the data set we are using 
-data_name = rotBar;
-show_flow_flag = false;
+data_name = translSin;
+show_flow_flag = true;
 %organize data in chunks
 group_time = true;%true;
-ms_per_frame = 5; %5 %ms
+ms_per_frame = 400; %5 %ms
 id_tsb = 1; % previous group of spike index
 spikes_per_frame = 400;%5000; % visualize the flow every spikes_per_frame spikes
 
@@ -41,6 +41,15 @@ if data_name == translSquare
     [x,y,pol,ts] = getDVSeventsDavis('TranslatingSquare.aedat');
 elseif data_name == rotBar
     [x,y,pol,ts] = getDVSeventsDavis('RotatingBar.aedat');
+elseif data_name == translSin
+    [x,y,pol,ts] = getDVSeventsDavis('IMU_translSin.aedat');
+    [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis('IMU_translSin.aedat');
+elseif data_name == rotDisk
+    [x,y,pol,ts] = getDVSeventsDavis('IMU_rotDisk.aedat');
+    [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis('IMU_rotDisk.aedat');
+elseif data_name == translBoxes
+    [x,y,pol,ts] = getDVSeventsDavis('IMU_translBoxes.aedat');
+    [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis('IMU_translBoxes.aedat');
 end
 %[t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis;%('IMU_rotBars.aedat',10000);  
 %ts = ts/30;
@@ -114,10 +123,6 @@ if data_name == rotBar
    update_mat = zeros(180,240);
 end
 
-vxE = zeros(180,240);
-vyE = zeros(180,240);
-update_mat = zeros(180,240);
-
 tic
 for i = 1:nts,
     % Current spike:
@@ -133,10 +138,10 @@ for i = 1:nts,
     % only reasonable speed is considered
     if data_name == translSquare
         if u < speed_thres
-            u=0;
+           % u=0;
         end
         if v < speed_thres
-            v=0;
+           % v=0;
         end
 
         tmp = 0;

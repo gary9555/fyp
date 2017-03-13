@@ -1,4 +1,4 @@
-function [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis(filename,maxevents)  
+function [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis(file,maxevents)  
 % function [t,ax,ay,az,gx,gy,gz,temperature,data] = getIMUSamplesSBret20(filename,maxevents)  
 % returns the IMU samples from the recorded data stream
 % t is in timestamp units (us)
@@ -25,11 +25,13 @@ defaultmaxevents=10000000000;
 if nargin==0,
     maxevents=defaultmaxevents;
     [filename,path,filterindex]=uigetfile({'*.*dat','*.aedat, *.dat'},'Select recorded retina data file');
+    disp(path);
+    disp(filename);
     if filename==0, return; end
 end
 if nargin==1,
      maxevents=defaultmaxevents;
-        path='./aedat/';
+        path='/home/gary9555/fyp/aedat/';
     filename=file;
 end
 if nargin==2,
