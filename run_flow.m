@@ -25,13 +25,15 @@ rotBar = 2; % syn sample
 translSin = 3; % real sample
 rotDisk = 4;  % real sample
 translBoxes = 5; % real sample
+translBarX = 6; % syn sample
+oscBar = 7; % syn sample
 
 % here we assign the data set we are using 
 data_name = rotDisk;
 show_flow_flag = false;
 %organize data in chunks
 group_time = true;%true;
-ms_per_frame = 5;%50; %5 %ms
+ms_per_frame = 80;%50; %5 %ms
 id_tsb = 1; % previous group of spike index
 spikes_per_frame = 400;%5000; % visualize the flow every spikes_per_frame spikes
 
@@ -50,6 +52,10 @@ elseif data_name == rotDisk
 elseif data_name == translBoxes
     [x,y,pol,ts] = getDVSeventsDavis('IMU_translBoxes.aedat');
     [t,ax,ay,az,temperature,gx,gy,gz,data] = getIMUSamplesDavis('IMU_translBoxes.aedat');
+elseif data_name == translBarX
+    [x,y,pol,ts] = getDVSeventsDavis('TranslatingBarX.aedat');
+elseif data_name == oscBar
+    [x,y,pol,ts] = getDVSeventsDavis('OscillatingDoubleBar.aedat');
 else
     [x,y,pol,ts] = getDVSeventsDavis('RubberWhale2.aedat');
 end
@@ -96,7 +102,7 @@ pol =double(pol);
 
 %num spikes
 nts = length(ts);
-
+nt = nts;200000
 % size imagedope
 %xmax = 240;%max(xs);
 %ymax = 180;%max(ys);
@@ -119,7 +125,7 @@ RAEE = 0;
 
 if data_name == rotBar
    load('gtRotatingBar.mat','vxGT','vyGT');
-   nts = 15000;
+   %nts = 15000;
    vxE = zeros(180,240);
    vyE = zeros(180,240);
    update_mat = zeros(180,240);
@@ -130,11 +136,19 @@ if data_name == rotDisk
    center_y0 = 100; % initial y center of rotation
    center_vx0 = 0; % initial x speed, assuming its static at the beginning
    center_vy0 = 0;
-   % apply low-pass filter to ax, ay
+   % apply moving average filter to smooth ax, ay
    num_avg = 40;
+   nts = 170000;
    coeff = ones(1, num_avg)/num_avg;
    avg_ax = filter(coeff, 1, ax);
    avg_ay = filter(coeff, 1, ay);
+   % phase shift
+   avg_ax = [avg_ax(21:end) ; avg_ax(1:20)];
+   avg_ay = [avg_ay(21:end) ; avg_ay(1:20)];
+   avg_ax(1:19) = avg_ax(20)*ones(19,1);
+   avg_ay(1:19) = avg_ay(20)*ones(19,1);
+   avg_ax(end-19:end) = avg_ax(end-20)*ones(20,1);
+   avg_ay(end-19:end) = avg_ay(end-20)*ones(20,1);
    omega = gz(1);
    % index of timestamp
    idx_t = 1; % for updating center
@@ -208,26 +222,24 @@ for i = 1:nts,
                 delta_t = double(ts(end) - t(end)) / 1e6;
             end
             
-            center_x0 = center_x0 + center_vx0*delta_t + 0.5*ax(idx_t)*delta_t^2; %%%%%%%%%%%%%%
-            center_y0 = center_y0 + center_vy0*delta_t + 0.5*ay(idx_t)*delta_t^2; %%%%%%%%%%%%%%
-            center_vx0 = center_vx0 + ax(idx_t)*delta_t;
-            center_vy0 = center_vy0 + ay(idx_t)*delta_t;
+            center_x0 = center_x0 + center_vx0*delta_t + 0.5*avg_ax(idx_t)*delta_t^2; %%%%%%%%%%%%%%
+            center_y0 = center_y0 + center_vy0*delta_t + 0.5*avg_ay(idx_t)*delta_t^2; %%%%%%%%%%%%%%
+            center_vx0 = center_vx0 + avg_ax(idx_t)*delta_t;
+            center_vy0 = center_vy0 + avg_ay(idx_t)*delta_t;
             idx_t = idx_t + 1;
             
         end
         % calculate distance from center and then velocity
-        center_x0 = double(center_x0);
-        center_y0 = double(center_y0);
+        center_x0 = 126 - 3*i/nts;
+        center_y0 = 100 - 15*i/nts;
         dist = sqrt((xi-center_x0)^2 + (yi-center_y0)^2);
-        % get omega
         
-        
-        v_gt = dist*omega; %%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        v_gt = dist*omega; 
         theta = atan2(yi-center_y0,xi-center_x0);
         v_gtx = v_gt*cos(theta);
         v_gty = v_gt*sin(theta);       
         % update RAEE 
-        RAEE = RAEE + sqrt((abs(u)-v_gtx)^2+(abs(v)-v_gty)^2)/sqrt(v_gtx^2+v_gty^2);
+        RAEE = RAEE + sqrt((abs(u)-abs(v_gtx))^2+(abs(v)-abs(v_gty))^2)/sqrt(v_gtx^2+v_gty^2);
     elseif data_name == translBoxes
 
     end
@@ -282,7 +294,7 @@ for i = 1:nts,
         end % update every group of spikes
     end % show_flow_flag
 end % outmost loop
-RAEE = RAEE/nts;
+RAEE = RAEE/nt;
 disp(['RAEE = ' num2str(RAEE)]);
 
 %avMsXSpike = toc/i*1000;
