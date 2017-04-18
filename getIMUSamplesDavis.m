@@ -63,6 +63,9 @@ gx=data(by7)*gyroScale;
 by7=by7+1;
 gy=data(by7)*gyroScale;
 by7=by7+1;
+if by7(end)>length(data)
+    by7(end) = by7(end-1);
+end
 gz=data(by7)*gyroScale;
 
 if nargout==0,

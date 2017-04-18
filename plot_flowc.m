@@ -38,7 +38,7 @@ V = V(rate:rate:end,1:rate:end);
 
 Duu = Du(rate:rate:end,1:rate:end)/scale;
 Dvv = Dv(rate:rate:end,1:rate:end)/scale;
-hq = quiver(U,V,Duu,Dvv,2.5,'k');  %%%%% plot the vectors
+hq = quiver(U,V,Duu,Dvv,2,'k');  %%%%% plot the vectors
 %hq = quiver(U,V,Duu,Dvv,'k'); 
 set(hq,'LineWidth',1.0);
 %set(hq,'LineWidth',2.0);
